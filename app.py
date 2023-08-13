@@ -93,7 +93,6 @@ class Get_Data(Resource):
 
         api_key = args['api_key']
 
-        # Check if API key exists in the database
         user = users.find_one({'api_key': api_key})
         if user is None:
             abort(401, message='Invalid API key')
@@ -109,39 +108,28 @@ class Get_Data(Resource):
 
         return {'data': decrypted_data}, 200
 class CSVUploadResource(Resource):
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('api_key', type=str, required=True, help='API key is required')
-        args = parser.parse_args()
-
-        api_key = args['api_key']
-
-        # Check if API key exists in the database
+    def post(self, api_key):
         user = users.find_one({'api_key': api_key})
         if user is None:
             abort(401, message='Invalid API key')
 
-        # Check if the POST request contains a file named 'csv_file'
         if 'csv_file' not in request.files:
             return {'message': 'No CSV file provided'}, 400
 
         csv_file = request.files['csv_file']
 
         if csv_file and allowed_file(csv_file.filename):
-            # Define the path based on the provided structure: data/api_key/name.csv
             filename = os.path.join(app.config['UPLOAD_FOLDER'], 'data', api_key, csv_file.filename)
 
-            # Create the directory if it doesn't exist
             os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-            # Save the uploaded CSV file, overwriting if the file already exists
             csv_file.save(filename)
             return {'message': 'CSV file uploaded successfully'}, 201
         else:
             return {'message': 'Invalid file format. Only CSV files are allowed.'}, 400
 
-api.add_resource(CSVUploadResource, '/csv_upload')
 api.add_resource(DataResource, '/send_data')
+api.add_resource(CSVUploadResource, '/upload_csv/<string:api_key>')
 api.add_resource(Get_Data, '/get_data/<string:data_key>')
 api.add_resource(UserResource, '/users')
 
