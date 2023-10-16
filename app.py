@@ -9,10 +9,8 @@ import os
 
 app = Flask(__name__)
 api = Api(app)
-
 client = MongoClient(config.MONGO_URI)
 db = client.systems
-
 mycollection = db.user
 
 users = db.users
@@ -42,15 +40,12 @@ class UserResource(Resource):
         username = args['username']
         password = args['password']
 
-        # Check if the username already exists
         existing_user = users.find_one({'username': username})
         if existing_user:
             return {'message': 'Username already exists'}, 400
 
-        # Generate a random API key
         api_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(32))
 
-        # Store user and API key in the database
         user_data = {'username': username, 'password': password, 'api_key': api_key}
         users.insert_one(user_data)
 
@@ -68,15 +63,12 @@ class DataResource(Resource):
         data_key = args['data_key']
         data = args['data']
 
-        # Check if API key exists in the database
         user = users.find_one({'api_key': api_key})
         if user is None:
             abort(401, message='Invalid API key')
 
-        # Encrypt the data before storing
         encrypted_data = cipher_suite.encrypt(data.encode())
 
-        # Store or update data in MongoDB using data_key
         data_entry = {
             'username': user['username'],
             'data_key': data_key,
@@ -97,12 +89,10 @@ class Get_Data(Resource):
         if user is None:
             abort(401, message='Invalid API key')
 
-        # Retrieve encrypted data from MongoDB using data_key
         data_entry = db.data_collection.find_one({'username': user['username'], 'data_key': data_key})
         if data_entry is None:
             return {'message': 'Data not found'}, 404
 
-        # Decrypt the data
         encrypted_data = data_entry['data']
         decrypted_data = cipher_suite.decrypt(encrypted_data).decode()
 
@@ -134,4 +124,4 @@ api.add_resource(Get_Data, '/get_data/<string:data_key>')
 api.add_resource(UserResource, '/users')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host= '0.0.0.0',port=8888)
